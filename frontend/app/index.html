@@ -5,6 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#000000" />
     <title>Solid App</title>
+    <script>
+      (function () {
+        try {
+          var m = localStorage.getItem('theme-mode') || 'system';
+          var p = localStorage.getItem('theme-palette') || 'default';
+          var dark = m === 'dark' || (m === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
+          document.documentElement.classList.toggle('dark', dark);
+          if (p && p !== 'default') document.documentElement.setAttribute('data-theme', p);
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
