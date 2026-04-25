@@ -1,0 +1,28 @@
+# VCS
+.git
+.gitignore
+
+# Build outputs
+bin/
+backend/web/dist/*
+!backend/web/dist/.gitkeep
+
+# Node / Bun
+**/node_modules
+**/.vite
+**/dist
+
+# Go
+**/*.test
+**/*.out
+
+# Editor / OS
+.DS_Store
+.idea
+.vscode
+*.swp
+
+# Docs / CI noise
+README.md
+Makefile
+.github
