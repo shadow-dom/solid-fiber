@@ -10,10 +10,30 @@
 
 ## Build status (as found)
 
-The project **does not build**. `go build ./...` fails, and it fails for *two independent reasons* — fixing one still leaves the other:
+The project **did not build**. `go build ./...` failed for *three independent reasons* (a third surfaced during the fix), plus a broken clone:
 
-1. `//go:embed all:dist` fails: `pattern all:dist: no matching files found` (no `dist/` dir is tracked).
-2. `backend/api/handlers` references an undefined `presenter` package.
+1. `//go:embed all:dist` failed: `pattern all:dist: no matching files found` (no `dist/` dir was tracked).
+2. `backend/api/handlers` referenced an undefined `presenter` package.
+3. **(discovered during fix)** `main.go` lived in `backend/cmd/`, but the Makefile (`go run .`, `go build … .`) and Dockerfile (`go build … .`) all build the module root `backend/`, which had no Go files — so the backend never built via its own tooling. Also, the handler used `c.BodyParser(...)`, which Fiber v3 removed (now `c.Bind().Body(...)`).
+
+## ✅ Completed on branch `claude/pr-task-list-handoff-kfn7fj`
+
+The P0 blockers and the core (interdependent, Opus-level) feature work are **done, building, vetted, and tested** in this branch. Decision: **UUID string IDs**.
+
+- **T1** — committed `backend/web/dist/.gitkeep`; embed resolves.
+- **T2** — added `backend/api/presenter/work_item.go` (`{status, data, error}` envelope).
+- **T3** — removed the dangling `examples/go-project` gitlink.
+- **T4** — correct status codes (400 empty title, 404 not found, 201 created, 204 delete) via `statusForError`.
+- **T5** — `WorkItem.ID` and all FK fields are now UUID `string`; service assigns a server-side UUID on create.
+- **T6** — full feature wired: `Repository` (in-memory impl) → `Service` → CRUD handlers → `routes.WorkItemRouter` → DI in `main.go`.
+- **T7** — unmatched `/api/*` now returns a JSON 404, not the SPA shell.
+- **T8** — graceful shutdown via `fiber.ListenConfig{GracefulContext}` on SIGINT/SIGTERM.
+- **T9** — table-driven service tests + handler integration tests (`go test ./...` green).
+- **Discovered blocker #3** — moved `main.go` to `backend/` root; migrated `BodyParser` → `Bind().Body`.
+
+**Verification:** `go build ./...`, `go vet ./...`, `go test ./...` all pass; frontend `bun run build` succeeds.
+
+**Remaining (handoff to Sonnet, all independent/parallelizable):** T10, T11, T12, T13, T15, T16, T18, T19, T20. **Opus:** T14 (CI), T17 (theme provider refactor). See details below.
 
 ---
 

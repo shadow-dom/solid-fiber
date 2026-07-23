@@ -1,22 +1,37 @@
 package main
 
 import (
+	"context"
 	"io/fs"
 	"log"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/static"
 
+	"github.com/shadow-dom/solid-fiber/api/routes"
+	"github.com/shadow-dom/solid-fiber/pkg/work_item"
 	"github.com/shadow-dom/solid-fiber/web"
 )
 
 func main() {
+	// Dependency wiring: repository -> service -> handlers.
+	repo := work_item.NewInMemoryRepository()
+	workItemService := work_item.NewService(repo)
+
 	app := fiber.New()
 
 	api := app.Group("/api")
 	api.Get("/hello", func(c fiber.Ctx) error {
 		return c.JSON(fiber.Map{"message": "hello from fiber"})
+	})
+	routes.WorkItemRouter(api, workItemService)
+
+	// Any unmatched /api/* request is a real 404 (JSON), not the SPA shell.
+	api.Use(func(c fiber.Ctx) error {
+		return fiber.ErrNotFound
 	})
 
 	dist, err := web.Dist()
@@ -43,5 +58,13 @@ func main() {
 	if v := os.Getenv("ADDR"); v != "" {
 		addr = v
 	}
-	log.Fatal(app.Listen(addr))
+
+	// Graceful shutdown: cancel the context on SIGINT/SIGTERM so in-flight
+	// requests can drain before the process exits.
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	if err := app.Listen(addr, fiber.ListenConfig{GracefulContext: ctx}); err != nil {
+		log.Fatalf("server error: %v", err)
+	}
 }
