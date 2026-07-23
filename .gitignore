@@ -5,6 +5,10 @@
 *.out
 coverage.*
 dist/
+# ...but keep the embed placeholder so `//go:embed all:dist` resolves in a fresh clone
+!backend/web/dist/
+backend/web/dist/*
+!backend/web/dist/.gitkeep
 
 # --- Go ---
 # Binaries from `go build` in module root

@@ -5,7 +5,7 @@
 FROM oven/bun:1.2-alpine AS frontend
 WORKDIR /repo/frontend/app
 
-COPY frontend/app/package.json frontend/app/bun.lockb* frontend/app/pnpm-lock.yaml* ./
+COPY frontend/app/package.json frontend/app/bun.lockb* ./
 RUN --mount=type=cache,target=/root/.bun/install/cache \
     bun install --frozen-lockfile
 

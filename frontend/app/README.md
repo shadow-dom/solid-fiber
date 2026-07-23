@@ -1,36 +1,35 @@
-## Usage
+# solid-fiber — frontend
 
-Those templates dependencies are maintained via [pnpm](https://pnpm.io) via `pnpm up -Lri`.
+The frontend for **solid-fiber**: a Solid + UnoCSS (preset-wind4) single-page app
+that is served by a Go [Fiber](https://gofiber.io) backend.
 
-This is the reason you see a `pnpm-lock.yaml`. That being said, any package manager will work. This file can be safely be removed once you clone a template.
+## Package manager
+
+This app uses [bun](https://bun.sh). Install dependencies with:
 
 ```bash
-$ npm install # or pnpm install or yarn install
+bun install
 ```
 
-### Learn more on the [Solid Website](https://solidjs.com) and come chat with us on our [Discord](https://discord.com/invite/solidjs)
+## Development
 
-## Available Scripts
+```bash
+bun run dev
+```
 
-In the project directory, you can run:
+Starts Vite on [http://localhost:5173](http://localhost:5173). Requests to `/api`
+are proxied to the Fiber backend on [http://localhost:3000](http://localhost:3000),
+so run the backend alongside the dev server.
 
-### `npm run dev` or `npm start`
+## Scripts
 
-Runs the app in the development mode.<br>
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+- `bun run dev` — start the Vite dev server on :5173 (proxies `/api` to the backend on :3000).
+- `bun run build` — type-check (`tsc --noEmit`) then build for production.
+- `bun run typecheck` — run `tsc --noEmit` with no emit, failing on type errors.
+- `bun run serve` — preview the production build locally.
 
-The page will reload if you make edits.<br>
+## Build output
 
-### `npm run build`
-
-Builds the app for production to the `dist` folder.<br>
-It correctly bundles Solid in production mode and optimizes the build for the best performance.
-
-The build is minified and the filenames include the hashes.<br>
-Your app is ready to be deployed!
-
-## Deployment
-
-You can deploy the `dist` folder to any static host provider (netlify, surge, now, etc.)
-
-## This project was created with the [Solid CLI](https://github.com/solidjs-community/solid-cli)
+`bun run build` outputs to `../../backend/web/dist` rather than a local `dist/`.
+That directory is embedded into the Go binary, so a production build of the Fiber
+backend serves the compiled frontend directly.

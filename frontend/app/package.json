@@ -1,12 +1,13 @@
 {
-  "name": "vite-template-solid",
+  "name": "solid-fiber",
   "version": "0.0.0",
-  "description": "",
+  "description": "Solid + UnoCSS (preset-wind4) + Fiber themed starter",
   "type": "module",
   "scripts": {
     "start": "vite",
     "dev": "vite",
-    "build": "vite build",
+    "build": "tsc --noEmit --skipLibCheck && vite build",
+    "typecheck": "tsc --noEmit --skipLibCheck",
     "serve": "vite preview"
   },
   "license": "MIT",
