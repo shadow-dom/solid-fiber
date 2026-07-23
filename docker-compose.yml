@@ -1,0 +1,25 @@
+# Compose spec (no top-level `version:` key needed).
+# Builds and runs the single-binary Solid + Fiber app from the repo Dockerfile.
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: solid-fiber
+    ports:
+      - "3000:3000"
+    environment:
+      ADDR: ":3000"
+    # Optional: uncomment to load additional vars from a local .env file
+    # (copy .env.example to .env first). Values in `environment:` above
+    # take precedence over env_file.
+    # env_file:
+    #   - .env
+    restart: unless-stopped
+    # NOTE: no healthcheck is defined here on purpose. The runtime stage is
+    # gcr.io/distroless/static-debian12:nonroot, which ships no shell and no
+    # utilities (no sh, curl, wget, etc.), so a conventional CMD-SHELL/exec
+    # healthcheck has nothing to run inside the container. Health should be
+    # verified externally (e.g. an orchestrator TCP/HTTP probe against
+    # host port 3000, or a separate sidecar) rather than via `docker compose`
+    # healthcheck.
