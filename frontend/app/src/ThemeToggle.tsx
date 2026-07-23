@@ -1,4 +1,5 @@
-import { For, Show, createSignal, onCleanup, onMount, type Component, type JSX } from 'solid-js';
+import { For, Show, createSignal, onCleanup, onMount, type Component } from 'solid-js';
+import { Dynamic } from 'solid-js/web';
 import { MODES, PALETTES, useTheme, type Mode, type Palette } from './theme';
 
 const SunIcon: Component = () => (
@@ -38,7 +39,7 @@ const PALETTE_LABEL: Record<Palette, string> = {
   violet: 'Violet',
 };
 
-// Preview swatch for each palette — uses raw OKLCH values that match theme.css.
+// Preview swatch for each palette — uses HSL values that match theme.css.
 const PALETTE_SWATCH: Record<Palette, string> = {
   default: 'hsl(221.2 83.2% 53.3%)',
   rose: 'hsl(346.8 77.2% 49.8%)',
@@ -133,7 +134,7 @@ export const ThemeToggle: Component = () => {
                       'bg-accent text-accent-foreground border-border': selected(),
                     }}
                   >
-                    {(meta.Icon({}) as JSX.Element)}
+                    <Dynamic component={meta.Icon} />
                     <span>{meta.label}</span>
                   </button>
                 );

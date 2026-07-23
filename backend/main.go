@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"io/fs"
-	"log"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
@@ -17,6 +17,9 @@ import (
 )
 
 func main() {
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	slog.SetDefault(logger)
+
 	// Dependency wiring: repository -> service -> handlers.
 	repo := work_item.NewInMemoryRepository()
 	workItemService := work_item.NewService(repo)
@@ -36,7 +39,8 @@ func main() {
 
 	dist, err := web.Dist()
 	if err != nil {
-		log.Fatalf("load embedded SPA: %v", err)
+		slog.Error("load embedded SPA", "error", err)
+		os.Exit(1)
 	}
 
 	app.Use("/", static.New("", static.Config{
@@ -64,7 +68,9 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
+	slog.Info("starting server", "addr", addr)
 	if err := app.Listen(addr, fiber.ListenConfig{GracefulContext: ctx}); err != nil {
-		log.Fatalf("server error: %v", err)
+		slog.Error("server error", "error", err)
+		os.Exit(1)
 	}
 }

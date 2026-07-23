@@ -1,4 +1,4 @@
-import { createEffect, createSignal, onCleanup, onMount } from 'solid-js';
+import { createEffect, createRoot, createSignal } from 'solid-js';
 
 export type Mode = 'light' | 'dark' | 'system';
 export type Palette = 'default' | 'rose' | 'emerald' | 'amber' | 'violet';
@@ -34,32 +34,45 @@ const [mode, setMode] = createSignal<Mode>('system');
 const [palette, setPalette] = createSignal<Palette>('default');
 const [resolved, setResolved] = createSignal<'light' | 'dark'>('light');
 
+// One-time setup: read persisted state, register the matchMedia listener, and
+// create the persistence/apply effect. Runs exactly once regardless of how many
+// components call useTheme(). Guarded so it never touches the DOM during SSR or
+// before the browser environment exists.
+let initialized = false;
+const init = () => {
+  if (initialized || typeof window === 'undefined') return;
+  initialized = true;
+
+  setMode(readMode());
+  setPalette(readPalette());
+
+  const mq = media();
+  mq.addEventListener('change', () => {
+    if (mode() === 'system') {
+      const r = resolveMode('system');
+      setResolved(r);
+      apply(r, palette());
+    }
+  });
+
+  // Own the persistence effect in a dedicated root so it lives for the app's
+  // lifetime and is never tied to (or disposed with) a particular component.
+  createRoot(() => {
+    createEffect(() => {
+      const m = mode();
+      const p = palette();
+      localStorage.setItem(KEY_MODE, m);
+      localStorage.setItem(KEY_PALETTE, p);
+      const r = resolveMode(m);
+      setResolved(r);
+      apply(r, p);
+    });
+  });
+};
+
+init();
+
 export const useTheme = () => {
-  onMount(() => {
-    setMode(readMode());
-    setPalette(readPalette());
-
-    const mq = media();
-    const onChange = () => {
-      if (mode() === 'system') {
-        const r = resolveMode('system');
-        setResolved(r);
-        apply(r, palette());
-      }
-    };
-    mq.addEventListener('change', onChange);
-    onCleanup(() => mq.removeEventListener('change', onChange));
-  });
-
-  createEffect(() => {
-    const m = mode();
-    const p = palette();
-    localStorage.setItem(KEY_MODE, m);
-    localStorage.setItem(KEY_PALETTE, p);
-    const r = resolveMode(m);
-    setResolved(r);
-    apply(r, p);
-  });
-
+  init();
   return { mode, palette, resolved, setMode, setPalette };
 };

@@ -33,7 +33,25 @@ The P0 blockers and the core (interdependent, Opus-level) feature work are **don
 
 **Verification:** `go build ./...`, `go vet ./...`, `go test ./...` all pass; frontend `bun run build` succeeds.
 
-**Remaining (handoff to Sonnet, all independent/parallelizable):** T10, T11, T12, T13, T15, T16, T18, T19, T20. **Opus:** T14 (CI), T17 (theme provider refactor). See details below.
+### ✅ Second wave — completed (all remaining tasks)
+
+Dispatched as three parallel subagents (disjoint file ownership), then integrated and re-verified together.
+
+- **T10** [Sonnet] — `main.go` now uses `log/slog` (JSON handler); fatal paths log + `os.Exit(1)`.
+- **T11** [Sonnet] — deleted `pnpm-lock.yaml`; Dockerfile copies only `bun.lockb`. bun is the single lockfile.
+- **T12** [Sonnet] — `package.json` renamed `solid-fiber` with a real description.
+- **T13** [Sonnet] — `typecheck` script added; `build` now runs `tsc --noEmit` first (`--skipLibCheck` to avoid `node_modules` `.d.ts` noise from config files not in `include`).
+- **T14** [Opus] — `.github/workflows/ci.yml`: backend (build/vet/test) + frontend (install/typecheck/build) jobs.
+- **T15** [Sonnet] — corrected the "OKLCH" comment to HSL.
+- **T16** [Sonnet] — real `<title>`; light/dark `theme-color` metas.
+- **T17** [Opus] — `useTheme()` refactored: one-time `init()` (guarded flag + `typeof window`), persistence effect owned by a `createRoot`; accessors-only return. No more per-call listener/effect duplication.
+- **T18** [Sonnet] — icon renders via `<Dynamic component={meta.Icon} />`.
+- **T19** [Sonnet] — root `README.md` added.
+- **T20** [Sonnet] — frontend `README.md` rewritten (bun, :5173 proxy, scripts, embed output).
+
+**Verification (combined):** `go build/vet/test` green; `bun install --frozen-lockfile` (no changes), `bun run typecheck`, `bun run build` all pass.
+
+**All 20 review tasks + 1 discovered blocker are complete.** Detailed original findings remain below for reference.
 
 ---
 
