@@ -27,6 +27,7 @@ so run the backend alongside the dev server.
 - `bun run build` — type-check (`tsc --noEmit`) then build for production.
 - `bun run typecheck` — run `tsc --noEmit` with no emit, failing on type errors.
 - `bun run test` — run the [Vitest](https://vitest.dev) suite once (`test:watch` for watch mode).
+- `bun run lint` — run ESLint (with the Solid plugin); warnings fail.
 - `bun run serve` — preview the production build locally.
 
 ## Build output

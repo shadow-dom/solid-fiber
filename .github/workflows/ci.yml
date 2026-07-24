@@ -18,6 +18,12 @@ jobs:
       - run: go build ./...
       - run: go vet ./...
       - run: go test ./...
+      # Build golangci-lint from source with the module's Go toolchain so its
+      # build version isn't older than the module's `go` directive.
+      - name: Install golangci-lint
+        run: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2
+      - name: golangci-lint
+        run: "$(go env GOPATH)/bin/golangci-lint run ./..."
 
   frontend:
     runs-on: ubuntu-latest
@@ -30,6 +36,7 @@ jobs:
         with:
           bun-version: latest
       - run: bun install --frozen-lockfile
+      - run: bun run lint
       - run: bun run typecheck
       - run: bun run test
       - run: bun run build

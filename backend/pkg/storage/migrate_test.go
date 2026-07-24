@@ -12,7 +12,7 @@ func TestMigrate_AppliesAndIsIdempotent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	migs := []storage.Migration{
 		{Version: 2, Name: "second", SQL: "CREATE TABLE t2(id INTEGER);"},
@@ -53,7 +53,7 @@ func TestMigrate_AppliesOnlyNewVersions(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	if err := storage.Migrate(db, []storage.Migration{
 		{Version: 1, Name: "first", SQL: "CREATE TABLE t1(id INTEGER);"},

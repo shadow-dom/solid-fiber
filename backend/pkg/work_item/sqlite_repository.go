@@ -106,7 +106,7 @@ func (r *sqliteRepository) ListByProjectID(projectID string) ([]*WorkItem, error
 	if err != nil {
 		return nil, fmt.Errorf("list work items: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	items := make([]*WorkItem, 0)
 	for rows.Next() {

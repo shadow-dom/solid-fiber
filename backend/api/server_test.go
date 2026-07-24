@@ -31,22 +31,23 @@ func testApp(pinger handlers.Pinger) *fiber.App {
 	})
 }
 
-func get(t *testing.T, app *fiber.App, target string) (*http.Response, map[string]any) {
+func get(t *testing.T, app *fiber.App, target string) (int, http.Header, map[string]any) {
 	t.Helper()
 	resp, err := app.Test(httptest.NewRequest(http.MethodGet, target, nil))
 	if err != nil {
 		t.Fatalf("app.Test: %v", err)
 	}
+	defer func() { _ = resp.Body.Close() }()
 	raw, _ := io.ReadAll(resp.Body)
 	var parsed map[string]any
 	_ = json.Unmarshal(raw, &parsed)
-	return resp, parsed
+	return resp.StatusCode, resp.Header, parsed
 }
 
 func TestHealth_OK(t *testing.T) {
-	resp, body := get(t, testApp(fakePinger{}), "/api/health")
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	status, _, body := get(t, testApp(fakePinger{}), "/api/health")
+	if status != http.StatusOK {
+		t.Fatalf("expected 200, got %d", status)
 	}
 	if body["status"] != true {
 		t.Fatalf("expected status true, got %v", body)
@@ -54,9 +55,9 @@ func TestHealth_OK(t *testing.T) {
 }
 
 func TestHealth_Unavailable(t *testing.T) {
-	resp, body := get(t, testApp(fakePinger{err: context.DeadlineExceeded}), "/api/health")
-	if resp.StatusCode != http.StatusServiceUnavailable {
-		t.Fatalf("expected 503, got %d", resp.StatusCode)
+	status, _, body := get(t, testApp(fakePinger{err: context.DeadlineExceeded}), "/api/health")
+	if status != http.StatusServiceUnavailable {
+		t.Fatalf("expected 503, got %d", status)
 	}
 	if body["status"] != false {
 		t.Fatalf("expected status false, got %v", body)
@@ -64,9 +65,9 @@ func TestHealth_Unavailable(t *testing.T) {
 }
 
 func TestUnknownAPIRoute_JSON404(t *testing.T) {
-	resp, body := get(t, testApp(fakePinger{}), "/api/nope")
-	if resp.StatusCode != http.StatusNotFound {
-		t.Fatalf("expected 404, got %d", resp.StatusCode)
+	status, _, body := get(t, testApp(fakePinger{}), "/api/nope")
+	if status != http.StatusNotFound {
+		t.Fatalf("expected 404, got %d", status)
 	}
 	if body["status"] != false || body["error"] == nil || body["error"] == "" {
 		t.Fatalf("expected JSON error envelope, got %v", body)
@@ -74,11 +75,11 @@ func TestUnknownAPIRoute_JSON404(t *testing.T) {
 }
 
 func TestSPAFallback_ServesIndex(t *testing.T) {
-	resp, _ := get(t, testApp(fakePinger{}), "/some/client/route")
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	status, header, _ := get(t, testApp(fakePinger{}), "/some/client/route")
+	if status != http.StatusOK {
+		t.Fatalf("expected 200, got %d", status)
 	}
-	if ct := resp.Header.Get("Content-Type"); ct == "" || ct[:9] != "text/html" {
+	if ct := header.Get("Content-Type"); ct == "" || ct[:9] != "text/html" {
 		t.Fatalf("expected html content type, got %q", ct)
 	}
 }
@@ -94,6 +95,7 @@ func TestPanicRecovered(t *testing.T) {
 	if err != nil {
 		t.Fatalf("app.Test: %v", err)
 	}
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusInternalServerError {
 		t.Fatalf("expected 500, got %d", resp.StatusCode)
 	}
