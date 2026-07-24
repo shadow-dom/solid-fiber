@@ -5,9 +5,21 @@ resource, replicate its layers. Below, `<resource>` is the snake_case package
 name (e.g. `tag`), `<Resource>` the exported type (e.g. `Tag`). Read the real
 `work_item` files alongside these templates — they are the source of truth.
 
-## Order of work
+The `//` notes in the templates below are guidance to *you*, not comments to ship.
+The code you write should follow the project standard: self-documenting, with
+comments only for non-obvious *why* (see SKILL.md → Core principles).
 
-Data model → migration → repository (interface + both impls) → service → routes/handlers → presenter → wire into `api/server.go` and `main.go` → tests. Each step below.
+## Order of work — test-first
+
+Define the contracts (types + interfaces) just enough to compile, then for each
+layer **write the test, watch it fail, implement, refactor**:
+
+1. Entity + `Repository`/`Service` interfaces (compile-only skeleton).
+2. Service test → service + in-memory repository.
+3. SQLite repository test → SQLite impl + migration.
+4. Handler test (`app.Test`) → handlers + presenter + routes + wiring.
+
+The templates are grouped by file below; reach for each when its test drives you there.
 
 ## 1. Entity — `pkg/<resource>/entities.go`
 
@@ -170,9 +182,14 @@ func <Resource>Router(router fiber.Router, service <resource>.Service) {
 - `main.go`: build the repo + service (`repo, _ := <resource>.NewSQLiteRepository(db); svc := <resource>.NewService(repo)`), pass into `api.New`.
 - `api/server.go`: add a field to `Config`, then `routes.<Resource>Router(api, cfg.<Resource>s)` **before** the `/api` 404 catch-all `api.Use(...)`.
 
-## 10. Tests
+## The tests (write these first — they drive steps above)
 
-Mirror `work_item`'s tests: table-driven service validation, a SQLite repo test using a temp DB (`storage.OpenSQLite(filepath.Join(t.TempDir(), "test.db"))`) including a persist-across-reopen check, and handler tests via `app.Test`. Aim to cover create/validation/not-found/pagination.
+Per the test-first order, each of these is written before the code it exercises,
+mirroring `work_item`'s tests:
+
+- **Service** (before steps 5/2): table-driven validation, create-assigns-UUID, not-found.
+- **SQLite repository** (before step 3): CRUD + a persist-across-reopen check, using a temp DB — `storage.OpenSQLite(filepath.Join(t.TempDir(), "test.db"))`.
+- **Handler** (before step 7): status codes, envelope shape, and pagination via `app.Test`.
 
 ## Then verify
 

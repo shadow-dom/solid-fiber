@@ -3,8 +3,14 @@
 The reference is `src/WorkItems.tsx` + `src/WorkItemCard.tsx` + `src/api.ts`.
 SolidJS is fine-grained reactive — read signals as function calls (`count()`),
 never destructure props, and do side-effecting work in event handlers or
-`createEffect`. Styling uses UnoCSS semantic tokens (`bg-card`, `text-muted-foreground`,
-`border-border`, `bg-primary`, …) that are theme-aware — reuse them, don't hard-code colors.
+`createEffect`.
+
+**Test-first**: write the component/api test (section 4) before the code (sections
+1–3), watch it fail, then implement. **Compose the UI from `components/ui` primitives**,
+not inline class strings — see `references/ui.md` for the shadcn/ui design language and
+which primitives to build. Style only through the theme tokens (`bg-card`,
+`text-muted-foreground`, `bg-primary`, …); never hard-code colors. Keep the code
+self-documenting — no narrating comments.
 
 ## 1. Typed API client — extend `src/api.ts`
 
