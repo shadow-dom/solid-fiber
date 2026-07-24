@@ -25,6 +25,27 @@ docker run -p 3000:3000 solid-fiber
 
 This is a multi-stage build: the SPA is built with bun, then embedded into a fully static Go binary, and the final image runs on a distroless nonroot base, listening on `:3000`.
 
+Or use Docker Compose (`make up` / `make down`), which builds the image and mounts a named volume so the SQLite database survives restarts:
+
+```sh
+docker compose up --build -d
+```
+
+## Configuration
+
+The server reads two environment variables:
+
+| Variable  | Default            | Description                                              |
+| --------- | ------------------ | -------------------------------------------------------- |
+| `ADDR`    | `:3000`            | Address (host:port) the server binds to.                 |
+| `DB_PATH` | `work_items.db`    | Path to the SQLite database file (created on first run). |
+
+In the container image `DB_PATH` defaults to `/data/work_items.db`, and `/data` is a volume so the database persists. See `.env.example`.
+
+## Persistence
+
+Work items are stored in a SQLite database via the pure-Go [`modernc.org/sqlite`](https://pkg.go.dev/modernc.org/sqlite) driver — no cgo, so the binary stays fully static. The schema is created automatically on startup, and the store is swappable: `pkg/work_item` defines a `Repository` interface with both a SQLite and an in-memory implementation.
+
 ## Project layout
 
 ```
@@ -34,7 +55,8 @@ backend/
     handlers/           # HTTP handlers
     presenter/           # JSON response envelope shaping
     routes/              # route registration
-  pkg/work_item/         # domain: entities, repository, service
+  pkg/work_item/         # domain: entities, service, repository (SQLite + in-memory)
+  pkg/storage/           # datastore connection helpers (SQLite)
   web/                    # //go:embed of the built SPA (backend/web/dist)
 frontend/app/             # SolidJS application (Vite, UnoCSS)
 ```

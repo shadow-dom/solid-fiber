@@ -10,6 +10,12 @@ services:
       - "3000:3000"
     environment:
       ADDR: ":3000"
+      DB_PATH: "/data/work_items.db"
+    # Persist the SQLite database across container restarts/recreates. The
+    # image ships an empty nonroot-owned /data, so the named volume inherits
+    # that ownership and the nonroot user can write to it.
+    volumes:
+      - workitem-data:/data
     # Optional: uncomment to load additional vars from a local .env file
     # (copy .env.example to .env first). Values in `environment:` above
     # take precedence over env_file.
@@ -23,3 +29,6 @@ services:
     # verified externally (e.g. an orchestrator TCP/HTTP probe against
     # host port 3000, or a separate sidecar) rather than via `docker compose`
     # healthcheck.
+
+volumes:
+  workitem-data:

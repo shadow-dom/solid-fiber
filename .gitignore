@@ -14,6 +14,11 @@ backend/web/dist/*
 # Binaries from `go build` in module root
 /backend/backend
 /backend/server
+
+# --- Local SQLite database ---
+*.db
+*.db-shm
+*.db-wal
 # Test caches & profiling
 *.prof
 go.work

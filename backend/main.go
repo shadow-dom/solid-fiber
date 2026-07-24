@@ -12,6 +12,7 @@ import (
 	"github.com/gofiber/fiber/v3/middleware/static"
 
 	"github.com/shadow-dom/solid-fiber/api/routes"
+	"github.com/shadow-dom/solid-fiber/pkg/storage"
 	"github.com/shadow-dom/solid-fiber/pkg/work_item"
 	"github.com/shadow-dom/solid-fiber/web"
 )
@@ -20,8 +21,25 @@ func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	slog.SetDefault(logger)
 
+	// Open the datastore. DB_PATH overrides the default location; the file is
+	// created on first run.
+	dbPath := "work_items.db"
+	if v := os.Getenv("DB_PATH"); v != "" {
+		dbPath = v
+	}
+	db, err := storage.OpenSQLite(dbPath)
+	if err != nil {
+		slog.Error("open database", "error", err)
+		os.Exit(1)
+	}
+	defer db.Close()
+
 	// Dependency wiring: repository -> service -> handlers.
-	repo := work_item.NewInMemoryRepository()
+	repo, err := work_item.NewSQLiteRepository(db)
+	if err != nil {
+		slog.Error("init work item repository", "error", err)
+		os.Exit(1)
+	}
 	workItemService := work_item.NewService(repo)
 
 	app := fiber.New()

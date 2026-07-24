@@ -33,6 +33,11 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
     go build -trimpath -ldflags="-s -w -buildid=" -o /out/server .
 
+# Create the data directory here so it can be copied into the shell-less runtime
+# image with the right ownership. A named volume mounted at /data inherits this
+# ownership, so the nonroot user can write the SQLite file.
+RUN mkdir -p /data
+
 
 # ---------- Stage 3: runtime ----------
 # distroless: no shell, no pkg manager, ~2MB. :nonroot runs as uid 65532.
@@ -40,9 +45,14 @@ FROM gcr.io/distroless/static-debian12:nonroot AS runtime
 
 WORKDIR /app
 COPY --from=backend --chown=nonroot:nonroot /out/server /app/server
+# Empty, nonroot-owned data dir; a mounted volume inherits this ownership.
+COPY --from=backend --chown=nonroot:nonroot /data /data
 
 USER nonroot:nonroot
 EXPOSE 3000
 ENV ADDR=":3000"
+# SQLite database location. Mount a volume at /data to persist it.
+ENV DB_PATH="/data/work_items.db"
+VOLUME ["/data"]
 
 ENTRYPOINT ["/app/server"]
