@@ -21,7 +21,7 @@
     "@testing-library/user-event": "^14.6.1",
     "@unocss/preset-wind4": "^66.7.5",
     "@unocss/vite": "^66.7.5",
-    "eslint": "^10.7.0",
+    "eslint": "^10.8.0",
     "eslint-plugin-solid": "^0.14.5",
     "globals": "^17.7.0",
     "jsdom": "^29.1.1",
