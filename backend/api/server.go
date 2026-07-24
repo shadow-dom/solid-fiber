@@ -11,6 +11,7 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/helmet"
+	"github.com/gofiber/fiber/v3/middleware/limiter"
 	recoverer "github.com/gofiber/fiber/v3/middleware/recover"
 	"github.com/gofiber/fiber/v3/middleware/requestid"
 	"github.com/gofiber/fiber/v3/middleware/static"
@@ -45,6 +46,17 @@ func New(cfg Config) *fiber.App {
 	app.Use(helmet.New())
 
 	api := app.Group("/api")
+
+	// Per-IP rate limit on the API (health checks are exempt so probes never trip it).
+	api.Use(limiter.New(limiter.Config{
+		Max:        100,
+		Expiration: time.Minute,
+		Next:       func(c fiber.Ctx) bool { return c.Path() == "/api/health" },
+		LimitReached: func(c fiber.Ctx) error {
+			return fiber.ErrTooManyRequests
+		},
+	}))
+
 	api.Get("/hello", func(c fiber.Ctx) error {
 		return c.JSON(fiber.Map{"message": "hello from fiber"})
 	})

@@ -2,12 +2,36 @@ package work_item
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/google/uuid"
 )
 
-// ErrTitleRequired is returned when a work item is created or updated without a title.
-var ErrTitleRequired = errors.New("title is required")
+// Validation errors returned by the service for invalid input.
+var (
+	ErrTitleRequired     = errors.New("title is required")
+	ErrProjectIDRequired = errors.New("project_id is required")
+	ErrInvalidPriority   = errors.New("priority must be between 0 and 3")
+	ErrNegativeValue     = errors.New("estimate_hours and story_points must be non-negative")
+)
+
+// validate normalizes and checks a work item, returning the first violation.
+func validate(w *WorkItem) error {
+	w.Title = strings.TrimSpace(w.Title)
+	if w.Title == "" {
+		return ErrTitleRequired
+	}
+	if strings.TrimSpace(w.ProjectID) == "" {
+		return ErrProjectIDRequired
+	}
+	if w.Priority < 0 || w.Priority > 3 {
+		return ErrInvalidPriority
+	}
+	if w.EstimateHours < 0 || w.StoryPoints < 0 {
+		return ErrNegativeValue
+	}
+	return nil
+}
 
 // Service is the application-facing port for work item use cases.
 type Service interface {
@@ -30,8 +54,8 @@ func NewService(repo Repository) Service {
 }
 
 func (s *service) CreateWorkItem(workItem *WorkItem) (*WorkItem, error) {
-	if workItem.Title == "" {
-		return nil, ErrTitleRequired
+	if err := validate(workItem); err != nil {
+		return nil, err
 	}
 	// IDs are assigned server-side; any client-supplied ID is ignored.
 	workItem.ID = uuid.NewString()
@@ -43,8 +67,8 @@ func (s *service) GetWorkItemByID(id string) (*WorkItem, error) {
 }
 
 func (s *service) UpdateWorkItem(workItem *WorkItem) (*WorkItem, error) {
-	if workItem.Title == "" {
-		return nil, ErrTitleRequired
+	if err := validate(workItem); err != nil {
+		return nil, err
 	}
 	return s.repo.Update(workItem)
 }
