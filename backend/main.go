@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"flag"
+	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -16,6 +18,23 @@ import (
 )
 
 func main() {
+	healthcheck := flag.Bool("healthcheck", false, "probe /api/health and exit 0 (healthy) or 1")
+	flag.Parse()
+
+	addr := ":3000"
+	if v := os.Getenv("ADDR"); v != "" {
+		addr = v
+	}
+
+	// Health-probe mode: used by the container HEALTHCHECK.
+	if *healthcheck {
+		if err := runHealthcheck(healthURL(addr)); err != nil {
+			fmt.Fprintln(os.Stderr, "healthcheck failed:", err)
+			os.Exit(1)
+		}
+		return
+	}
+
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	slog.SetDefault(logger)
 
@@ -51,11 +70,6 @@ func main() {
 		Pinger:    db,
 		SPA:       dist,
 	})
-
-	addr := ":3000"
-	if v := os.Getenv("ADDR"); v != "" {
-		addr = v
-	}
 
 	// Graceful shutdown: cancel the context on SIGINT/SIGTERM so in-flight
 	// requests can drain before the process exits.

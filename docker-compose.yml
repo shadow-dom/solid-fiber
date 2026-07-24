@@ -22,13 +22,14 @@ services:
     # env_file:
     #   - .env
     restart: unless-stopped
-    # NOTE: no healthcheck is defined here on purpose. The runtime stage is
-    # gcr.io/distroless/static-debian12:nonroot, which ships no shell and no
-    # utilities (no sh, curl, wget, etc.), so a conventional CMD-SHELL/exec
-    # healthcheck has nothing to run inside the container. Health should be
-    # verified externally (e.g. an orchestrator TCP/HTTP probe against
-    # host port 3000, or a separate sidecar) rather than via `docker compose`
-    # healthcheck.
+    # The runtime image has no shell, so the healthcheck runs the binary itself
+    # in --healthcheck mode (an exec probe, not CMD-SHELL).
+    healthcheck:
+      test: ["CMD", "/app/server", "--healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
 
 volumes:
   workitem-data:
