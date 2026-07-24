@@ -44,26 +44,28 @@ In the container image `DB_PATH` defaults to `/data/work_items.db`, and `/data` 
 
 ## Persistence
 
-Work items are stored in a SQLite database via the pure-Go [`modernc.org/sqlite`](https://pkg.go.dev/modernc.org/sqlite) driver — no cgo, so the binary stays fully static. The schema is created automatically on startup, and the store is swappable: `pkg/work_item` defines a `Repository` interface with both a SQLite and an in-memory implementation.
+Work items are stored in a SQLite database via the pure-Go [`modernc.org/sqlite`](https://pkg.go.dev/modernc.org/sqlite) driver — no cgo, so the binary stays fully static. The schema is applied on startup by a small forward-only migration runner (`pkg/storage`), tracked in a `schema_migrations` table. The store is swappable: `pkg/work_item` defines a `Repository` interface with both a SQLite and an in-memory implementation.
 
 ## Project layout
 
 ```
 backend/
-  main.go              # entrypoint: dependency wiring, routes, embedded SPA + fallback, graceful shutdown
+  main.go              # entrypoint: config, dependency wiring, graceful shutdown
   api/
-    handlers/           # HTTP handlers
+    server.go           # app assembly: middleware, routes, health, embedded SPA + fallback
+    handlers/           # HTTP handlers (work items, health)
     presenter/           # JSON response envelope shaping
     routes/              # route registration
-  pkg/work_item/         # domain: entities, service, repository (SQLite + in-memory)
-  pkg/storage/           # datastore connection helpers (SQLite)
+  pkg/work_item/         # domain: entities, service, repository (SQLite + in-memory), migrations
+  pkg/storage/           # datastore connection + migration runner (SQLite)
   web/                    # //go:embed of the built SPA (backend/web/dist)
 frontend/app/             # SolidJS application (Vite, UnoCSS)
 ```
 
 ## API
 
-- `GET /api/hello` - health/sample endpoint.
+- `GET /api/hello` - sample endpoint.
+- `GET /api/health` - liveness + datastore check (`200` healthy, `503` if the DB is unreachable).
 - Work items CRUD under `/api/work-items`:
   - `POST /api/work-items` - create a work item.
   - `GET /api/work-items?project_id=<id>` - list work items for a project.
@@ -71,4 +73,6 @@ frontend/app/             # SolidJS application (Vite, UnoCSS)
   - `PUT /api/work-items/:id` - update a work item.
   - `DELETE /api/work-items/:id` - delete a work item.
 
-All responses use a standard JSON envelope: `{"status": bool, "data": ..., "error": ...}`. Entity ids are UUID strings.
+All responses (including errors and 404s) use a standard JSON envelope: `{"status": bool, "data": ..., "error": ...}`. Entity ids are UUID strings.
+
+Every request passes through middleware for panic recovery, a request id (`X-Request-Id`), security headers ([helmet](https://pkg.go.dev/github.com/gofiber/fiber/v3/middleware/helmet)), and structured (slog) access logging.
