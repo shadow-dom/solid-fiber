@@ -1,4 +1,4 @@
-.PHONY: dev dev-frontend dev-backend build build-frontend build-backend run clean install
+.PHONY: dev dev-frontend dev-backend build build-frontend build-backend run clean install up down
 
 FRONTEND_DIR := frontend/app
 BACKEND_DIR  := backend
@@ -32,3 +32,10 @@ run: build
 clean:
 	rm -rf $(BIN) backend/web/dist/*
 	touch backend/web/dist/.gitkeep
+
+# Docker Compose: build the image (via the repo Dockerfile) and run it detached.
+up:
+	docker compose up --build -d
+
+down:
+	docker compose down
