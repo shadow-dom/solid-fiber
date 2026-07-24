@@ -15,12 +15,17 @@ func WorkItemSuccessResponse(data *work_item.WorkItem) fiber.Map {
 	}
 }
 
-// WorkItemsSuccessResponse wraps a list of work items in the standard success envelope.
-func WorkItemsSuccessResponse(data []*work_item.WorkItem) fiber.Map {
+// WorkItemsPaginatedResponse wraps a page of work items with pagination metadata.
+func WorkItemsPaginatedResponse(data []*work_item.WorkItem, total, limit, offset int) fiber.Map {
 	return fiber.Map{
 		"status": true,
 		"data":   data,
-		"error":  nil,
+		"meta": fiber.Map{
+			"total":  total,
+			"limit":  limit,
+			"offset": offset,
+		},
+		"error": nil,
 	}
 }
 

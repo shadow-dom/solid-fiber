@@ -3,6 +3,7 @@ package handlers
 import (
 	"errors"
 	"net/http"
+	"strconv"
 
 	"github.com/gofiber/fiber/v3"
 
@@ -82,7 +83,13 @@ func DeleteWorkItem(service work_item.Service) fiber.Handler {
 	}
 }
 
-// ListWorkItems handles GET /api/work-items?project_id=...
+// Pagination bounds for the list endpoint.
+const (
+	defaultListLimit = 20
+	maxListLimit     = 100
+)
+
+// ListWorkItems handles GET /api/work-items?project_id=...&limit=...&offset=...
 func ListWorkItems(service work_item.Service) fiber.Handler {
 	return func(c fiber.Ctx) error {
 		projectID := c.Query("project_id")
@@ -90,11 +97,35 @@ func ListWorkItems(service work_item.Service) fiber.Handler {
 			c.Status(http.StatusBadRequest)
 			return c.JSON(presenter.WorkItemErrorResponse(errors.New("project_id query parameter is required")))
 		}
-		results, err := service.ListWorkItemsByProjectID(projectID)
+
+		limit := queryInt(c, "limit", defaultListLimit)
+		if limit <= 0 {
+			limit = defaultListLimit
+		}
+		if limit > maxListLimit {
+			limit = maxListLimit
+		}
+		offset := queryInt(c, "offset", 0)
+		if offset < 0 {
+			offset = 0
+		}
+
+		results, total, err := service.ListWorkItemsByProjectID(projectID, limit, offset)
 		if err != nil {
 			c.Status(statusForError(err))
 			return c.JSON(presenter.WorkItemErrorResponse(err))
 		}
-		return c.JSON(presenter.WorkItemsSuccessResponse(results))
+		return c.JSON(presenter.WorkItemsPaginatedResponse(results, total, limit, offset))
 	}
+}
+
+// queryInt reads an integer query parameter, falling back to def when absent or
+// unparseable.
+func queryInt(c fiber.Ctx, key string, def int) int {
+	if v := c.Query(key); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			return n
+		}
+	}
+	return def
 }

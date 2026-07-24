@@ -95,6 +95,34 @@ describe('<WorkItems>', () => {
     expect(JSON.parse((putCall![1] as RequestInit).body as string)).toMatchObject({ title: 'Renamed' });
   });
 
+  it('pages through results with Next', async () => {
+    const mkItems = (start: number, n: number) =>
+      Array.from({ length: n }, (_, i) => ({
+        id: String(start + i),
+        title: `t${start + i}`,
+        project_id: 'demo',
+        description_markdown: '',
+      }));
+    const listResp = (data: unknown, total: number, offset: number) => ({
+      ok: true,
+      status: 200,
+      json: async () => ({ status: true, data, meta: { total, limit: 20, offset }, error: null }),
+    });
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(listResp(mkItems(0, 20), 25, 0)) // page 1
+      .mockResolvedValueOnce(listResp(mkItems(20, 5), 25, 20)); // page 2 after Next
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(() => <WorkItems />);
+    await screen.findByText('t0');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+
+    expect(await screen.findByText('t20')).toBeInTheDocument();
+    expect(fetchMock.mock.calls[1][0] as string).toContain('offset=20');
+  });
+
   it('shows an error when the API fails', async () => {
     vi.stubGlobal(
       'fetch',

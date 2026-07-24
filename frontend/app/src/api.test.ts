@@ -14,21 +14,23 @@ function stubFetch(status: number, body?: unknown) {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('api client', () => {
-  it('unwraps data on success', async () => {
+  it('returns a page with items and total from meta', async () => {
     stubFetch(200, {
       status: true,
       data: [{ id: '1', title: 'a', project_id: 'p', description_markdown: '' }],
+      meta: { total: 5, limit: 20, offset: 0 },
       error: null,
     });
-    const items = await listWorkItems('p');
-    expect(items).toHaveLength(1);
-    expect(items[0].title).toBe('a');
+    const page = await listWorkItems('p');
+    expect(page.items).toHaveLength(1);
+    expect(page.items[0].title).toBe('a');
+    expect(page.total).toBe(5);
   });
 
-  it('encodes the project id into the query', async () => {
-    const fn = stubFetch(200, { status: true, data: [], error: null });
-    await listWorkItems('a/b');
-    expect(fn).toHaveBeenCalledWith('/api/work-items?project_id=a%2Fb', undefined);
+  it('encodes the project id and passes limit/offset', async () => {
+    const fn = stubFetch(200, { status: true, data: [], meta: { total: 0, limit: 20, offset: 40 }, error: null });
+    await listWorkItems('a/b', { limit: 20, offset: 40 });
+    expect(fn).toHaveBeenCalledWith('/api/work-items?project_id=a%2Fb&limit=20&offset=40');
   });
 
   it('throws with the server error message on an error envelope', async () => {

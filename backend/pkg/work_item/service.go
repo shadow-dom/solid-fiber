@@ -15,7 +15,9 @@ type Service interface {
 	GetWorkItemByID(id string) (*WorkItem, error)
 	UpdateWorkItem(workItem *WorkItem) (*WorkItem, error)
 	DeleteWorkItem(id string) error
-	ListWorkItemsByProjectID(projectID string) ([]*WorkItem, error)
+	// ListWorkItemsByProjectID returns a page of items (ordered by id, sliced by
+	// offset/limit) along with the total count for the project.
+	ListWorkItemsByProjectID(projectID string, limit, offset int) ([]*WorkItem, int, error)
 }
 
 type service struct {
@@ -51,6 +53,14 @@ func (s *service) DeleteWorkItem(id string) error {
 	return s.repo.Delete(id)
 }
 
-func (s *service) ListWorkItemsByProjectID(projectID string) ([]*WorkItem, error) {
-	return s.repo.ListByProjectID(projectID)
+func (s *service) ListWorkItemsByProjectID(projectID string, limit, offset int) ([]*WorkItem, int, error) {
+	items, err := s.repo.ListByProjectID(projectID, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	total, err := s.repo.CountByProjectID(projectID)
+	if err != nil {
+		return nil, 0, err
+	}
+	return items, total, nil
 }
