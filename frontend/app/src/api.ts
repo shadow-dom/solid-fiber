@@ -5,9 +5,18 @@ export interface WorkItem {
   id: string;
   title: string;
   description_markdown: string;
+  parent_id?: string;
+  column_id?: string;
+  assignee_id?: string;
+  reporter_id?: string;
+  sprint_id?: string;
   priority?: number;
-  labels?: string[];
+  estimate_hours?: number;
+  story_points?: number;
+  due_date?: number;
   is_milestone?: boolean;
+  epic_color?: string;
+  labels?: string[];
   project_id: string;
 }
 
