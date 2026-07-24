@@ -84,6 +84,23 @@ func TestSPAFallback_ServesIndex(t *testing.T) {
 	}
 }
 
+func TestRateLimit_HeadersOnAPI(t *testing.T) {
+	status, header, _ := get(t, testApp(fakePinger{}), "/api/hello")
+	if status != http.StatusOK {
+		t.Fatalf("expected 200, got %d", status)
+	}
+	if header.Get("X-RateLimit-Limit") == "" {
+		t.Fatalf("expected rate-limit headers on /api, got none")
+	}
+}
+
+func TestRateLimit_HealthExempt(t *testing.T) {
+	_, header, _ := get(t, testApp(fakePinger{}), "/api/health")
+	if header.Get("X-RateLimit-Limit") != "" {
+		t.Fatalf("expected /api/health to be exempt from the rate limiter")
+	}
+}
+
 // TestPanicRecovered verifies the recover middleware + jsonErrorHandler turn a
 // panic into a 500 JSON envelope rather than dropping the connection.
 func TestPanicRecovered(t *testing.T) {

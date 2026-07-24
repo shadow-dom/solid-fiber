@@ -14,7 +14,10 @@ import (
 // statusForError maps domain errors to HTTP status codes.
 func statusForError(err error) int {
 	switch {
-	case errors.Is(err, work_item.ErrTitleRequired):
+	case errors.Is(err, work_item.ErrTitleRequired),
+		errors.Is(err, work_item.ErrProjectIDRequired),
+		errors.Is(err, work_item.ErrInvalidPriority),
+		errors.Is(err, work_item.ErrNegativeValue):
 		return http.StatusBadRequest
 	case errors.Is(err, work_item.ErrNotFound):
 		return http.StatusNotFound

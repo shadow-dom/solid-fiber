@@ -9,13 +9,13 @@ Tags: **[Sonnet]** = mechanical / well-scoped · **[Opus]** = design / cross-cut
 ## A. Security & tenancy
 - **A1 — No authentication/authorization** `[Opus]`. The API is fully open and work items have no owner/tenant; anyone can read or mutate any project's items. The main blocker before real use. Add auth (session/JWT/API-key) + an ownership column and enforcement. *High effort.*
 - **A2 — DB calls ignore request context** `[Sonnet→Opus]`. `pkg/work_item/sqlite_repository.go` uses `db.Query`/`Exec`, not `…Context`. Thread `c.Context()` through so cancelled/timed-out requests cancel DB work.
-- **A3 — No rate limiting** `[Sonnet]`. Add Fiber's `limiter` middleware in `api/server.go`.
+- **A3 — ✅ Done.** Per-IP rate limiting (Fiber `limiter`, 100/min) on `/api`, health-check exempt, 429 rendered as the JSON envelope.
 - **A4 — No vulnerability scanning in CI** `[Sonnet]`. Add `govulncheck` (build from source with the module toolchain, like the golangci-lint step) and/or a CodeQL workflow.
 
 ## B. Data model & API correctness
 - **B1 — No `created_at`/`updated_at`** `[Opus]`. Ordering is by UUID `id` (arbitrary). Add timestamp columns (migration `0002`) and order by `created_at DESC` for "newest first"; removes the post-create-reset workaround in the UI.
 - **B2 — `PUT` is full-replace, no `PATCH`** `[Opus]`. Omitted fields get zeroed — safe for the UI (sends the whole object) but a footgun for other clients. Add partial-update semantics or document the contract prominently.
-- **B3 — Thin validation** `[Sonnet]`. `service.go` only checks `Title == ""`. Trim the title (whitespace-only currently passes), require `project_id`, and bound `priority` (0–3) / non-negative `story_points`/`estimate_hours`.
+- **B3 — ✅ Done.** `service.go` now trims the title, requires `project_id`, bounds `priority` (0–3), and rejects negative `story_points`/`estimate_hours` (all mapped to `400`).
 - **B4 — Dead entity fields** `[Opus]`. `entities.go` stores `parent_id, column_id, assignee_id, reporter_id, sprint_id, estimate_hours, epic_color` — none are exposed by any endpoint or the UI. Decide: build features around them (hierarchy, boards, assignees) or trim to what's used.
 - **B5 — SQLite write concurrency** `[Sonnet]`. WAL + `busy_timeout` help, but the default pool can still hit `SQLITE_BUSY` under concurrent writers. Consider `SetMaxOpenConns(1)` or a write mutex, and document the single-instance assumption.
 
@@ -37,13 +37,13 @@ Tags: **[Sonnet]** = mechanical / well-scoped · **[Opus]** = design / cross-cut
 - **E4 — TypeScript held at 5.x** `[Sonnet]`. `typescript-eslint` does not support TypeScript ≥ 7 yet (the native compiler; typescript-eslint#10940). A Dependabot `ignore` keeps TS on 5.x for now — drop it and bump once the lint toolchain supports the new compiler.
 
 ## F. Docs & hygiene
-- **F1 — No `LICENSE` file** though `package.json` declares MIT `[Sonnet]`. Add `LICENSE`. Consider also `SECURITY.md`, `CONTRIBUTING.md`, issue/PR templates, and `CODEOWNERS`.
+- **F1 — ✅ Done (partial).** Added an MIT `LICENSE` matching `package.json`. Still consider `SECURITY.md`, `CONTRIBUTING.md`, issue/PR templates, and `CODEOWNERS`.
 - **F2 — No API reference** `[Opus]`. Add an OpenAPI spec (or a curl-based API doc) for the work-items endpoints + the `{status, data, error, meta}` envelope.
 
 ---
 
 ## Suggested order
-1. **Quick wins**: F1 (`LICENSE`), B3 (validation), A3 (rate limit).
+1. ~~Quick wins: F1 (`LICENSE`), B3 (validation), A3 (rate limit).~~ ✅ done
 2. **UX unlock**: B1 (`created_at` + "newest first" ordering).
 3. **Production blocker**: A1 (auth + tenancy).
 4. **Confidence**: D2 (end-to-end test), A4 (govulncheck/CodeQL), E2 (Docker build in CI).

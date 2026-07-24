@@ -9,10 +9,37 @@ func newTestService() Service {
 	return NewService(NewInMemoryRepository())
 }
 
-func TestCreateWorkItem_RequiresTitle(t *testing.T) {
+func TestCreateWorkItem_Validation(t *testing.T) {
+	cases := []struct {
+		name string
+		in   *WorkItem
+		want error
+	}{
+		{"empty title", &WorkItem{ProjectID: "p1"}, ErrTitleRequired},
+		{"whitespace title", &WorkItem{Title: "   ", ProjectID: "p1"}, ErrTitleRequired},
+		{"missing project", &WorkItem{Title: "x"}, ErrProjectIDRequired},
+		{"priority too high", &WorkItem{Title: "x", ProjectID: "p1", Priority: 4}, ErrInvalidPriority},
+		{"priority negative", &WorkItem{Title: "x", ProjectID: "p1", Priority: -1}, ErrInvalidPriority},
+		{"negative points", &WorkItem{Title: "x", ProjectID: "p1", StoryPoints: -2}, ErrNegativeValue},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			svc := newTestService()
+			if _, err := svc.CreateWorkItem(tc.in); !errors.Is(err, tc.want) {
+				t.Fatalf("expected %v, got %v", tc.want, err)
+			}
+		})
+	}
+}
+
+func TestCreateWorkItem_TrimsTitle(t *testing.T) {
 	svc := newTestService()
-	if _, err := svc.CreateWorkItem(&WorkItem{ProjectID: "p1"}); !errors.Is(err, ErrTitleRequired) {
-		t.Fatalf("expected ErrTitleRequired, got %v", err)
+	created, err := svc.CreateWorkItem(&WorkItem{Title: "  Trim me  ", ProjectID: "p1"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if created.Title != "Trim me" {
+		t.Fatalf("expected trimmed title, got %q", created.Title)
 	}
 }
 
@@ -45,7 +72,7 @@ func TestGetWorkItemByID_NotFound(t *testing.T) {
 
 func TestUpdateWorkItem_NotFound(t *testing.T) {
 	svc := newTestService()
-	if _, err := svc.UpdateWorkItem(&WorkItem{ID: "missing", Title: "x"}); !errors.Is(err, ErrNotFound) {
+	if _, err := svc.UpdateWorkItem(&WorkItem{ID: "missing", Title: "x", ProjectID: "p1"}); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("expected ErrNotFound, got %v", err)
 	}
 }
