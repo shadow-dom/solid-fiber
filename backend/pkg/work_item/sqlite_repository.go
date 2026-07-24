@@ -5,29 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-)
 
-const sqliteSchema = `
-CREATE TABLE IF NOT EXISTS work_items (
-	id                   TEXT PRIMARY KEY,
-	title                TEXT    NOT NULL,
-	description_markdown TEXT    NOT NULL DEFAULT '',
-	parent_id            TEXT    NOT NULL DEFAULT '',
-	column_id            TEXT    NOT NULL DEFAULT '',
-	assignee_id          TEXT    NOT NULL DEFAULT '',
-	reporter_id          TEXT    NOT NULL DEFAULT '',
-	sprint_id            TEXT    NOT NULL DEFAULT '',
-	priority             INTEGER NOT NULL DEFAULT 0,
-	estimate_hours       REAL    NOT NULL DEFAULT 0,
-	story_points         REAL    NOT NULL DEFAULT 0,
-	due_date             INTEGER NOT NULL DEFAULT 0,
-	is_milestone         INTEGER NOT NULL DEFAULT 0,
-	epic_color           TEXT    NOT NULL DEFAULT '',
-	labels               TEXT    NOT NULL DEFAULT '[]',
-	project_id           TEXT    NOT NULL DEFAULT ''
-);
-CREATE INDEX IF NOT EXISTS idx_work_items_project_id ON work_items(project_id);
-`
+	"github.com/shadow-dom/solid-fiber/pkg/storage"
+)
 
 // The column list shared by reads and writes, in a stable order.
 const workItemColumns = `id, title, description_markdown, parent_id, column_id,
@@ -39,10 +19,11 @@ type sqliteRepository struct {
 	db *sql.DB
 }
 
-// NewSQLiteRepository returns a Repository backed by db, creating the schema if
-// it does not already exist.
+// NewSQLiteRepository returns a Repository backed by db, applying any pending
+// schema migrations first. Migration is idempotent, so this is safe to call on
+// an already-migrated database.
 func NewSQLiteRepository(db *sql.DB) (Repository, error) {
-	if _, err := db.Exec(sqliteSchema); err != nil {
+	if err := storage.Migrate(db, Migrations); err != nil {
 		return nil, fmt.Errorf("migrate work_items schema: %w", err)
 	}
 	return &sqliteRepository{db: db}, nil
