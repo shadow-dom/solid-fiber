@@ -23,7 +23,7 @@ docker build -t solid-fiber .
 docker run -p 3000:3000 solid-fiber
 ```
 
-This is a multi-stage build: the SPA is built with bun, then embedded into a fully static Go binary, and the final image runs on a distroless nonroot base, listening on `:3000`.
+This is a multi-stage build: the SPA is built with bun, then embedded into a fully static Go binary, and the final image runs on a distroless nonroot base, listening on `:3000`. The image defines a `HEALTHCHECK` that runs the binary in `--healthcheck` mode (`server --healthcheck` probes `/api/health` and exits non-zero when unhealthy), so the shell-less runtime can self-report health.
 
 Or use Docker Compose (`make up` / `make down`), which builds the image and mounts a named volume so the SQLite database survives restarts:
 

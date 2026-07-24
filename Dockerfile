@@ -55,4 +55,9 @@ ENV ADDR=":3000"
 ENV DB_PATH="/data/work_items.db"
 VOLUME ["/data"]
 
+# The binary probes itself in --healthcheck mode, so the shell-less distroless
+# image needs no extra tooling.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+    CMD ["/app/server", "--healthcheck"]
+
 ENTRYPOINT ["/app/server"]

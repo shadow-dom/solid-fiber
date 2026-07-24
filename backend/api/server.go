@@ -29,7 +29,13 @@ type Config struct {
 
 // New builds the Fiber application with all middleware and routes wired up.
 func New(cfg Config) *fiber.App {
-	app := fiber.New(fiber.Config{ErrorHandler: jsonErrorHandler})
+	app := fiber.New(fiber.Config{
+		ErrorHandler: jsonErrorHandler,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
+		IdleTimeout:  60 * time.Second,
+		BodyLimit:    1 * 1024 * 1024, // 1 MiB
+	})
 
 	// Global middleware. requestid runs first so it's available to the logger
 	// and error handler; recover sits above the routes to catch panics.
