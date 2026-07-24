@@ -6,10 +6,12 @@ import {
   deleteWorkItem,
   type WorkItem,
 } from './api';
+import { PRIORITY_LABELS, toLabels, dateToUnix } from './format';
+import { WorkItemCard } from './WorkItemCard';
 
-const PRIORITY_LABELS = ['None', 'Low', 'Medium', 'High'];
-
-const priorityLabel = (p?: number) => PRIORITY_LABELS[p ?? 0] ?? 'None';
+const fieldClass =
+  'px-3 py-2 rounded-md border border-input bg-background text-sm ' +
+  'focus:outline-none focus-visible:ring-2 focus-visible:ring-ring';
 
 export const WorkItems: Component = () => {
   const [projectId, setProjectId] = createSignal('demo');
@@ -17,6 +19,13 @@ export const WorkItems: Component = () => {
 
   const [title, setTitle] = createSignal('');
   const [priority, setPriority] = createSignal(0);
+  const [showMore, setShowMore] = createSignal(false);
+  const [description, setDescription] = createSignal('');
+  const [labelsText, setLabelsText] = createSignal('');
+  const [dueDate, setDueDate] = createSignal('');
+  const [storyPoints, setStoryPoints] = createSignal('');
+  const [milestone, setMilestone] = createSignal(false);
+
   const [busy, setBusy] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
 
@@ -37,26 +46,33 @@ export const WorkItems: Component = () => {
     e.preventDefault();
     const t = title().trim();
     if (!t) return;
-    // Capture reactive values in the event handler; the async closure uses them.
-    const project = projectId();
-    const p = priority();
+    // Capture reactive values before the async closure.
+    const input: WorkItem = {
+      id: '',
+      title: t,
+      project_id: projectId(),
+      description_markdown: description(),
+      priority: priority(),
+      labels: toLabels(labelsText()),
+      due_date: dateToUnix(dueDate()),
+      story_points: storyPoints() ? Number(storyPoints()) : 0,
+      is_milestone: milestone(),
+    };
     void run(async () => {
-      await createWorkItem({ title: t, project_id: project, priority: p });
+      await createWorkItem(input);
       setTitle('');
       setPriority(0);
+      setDescription('');
+      setLabelsText('');
+      setDueDate('');
+      setStoryPoints('');
+      setMilestone(false);
+      setShowMore(false);
     });
   };
 
-  const cyclePriority = (item: WorkItem) =>
-    run(() => updateWorkItem(item.id, { ...item, priority: ((item.priority ?? 0) + 1) % 4 }));
-
-  const rename = (item: WorkItem, next: string) => {
-    const t = next.trim();
-    if (!t || t === item.title) return;
-    void run(() => updateWorkItem(item.id, { ...item, title: t }));
-  };
-
-  const remove = (item: WorkItem) => run(() => deleteWorkItem(item.id));
+  const onUpdate = (item: WorkItem) => run(() => updateWorkItem(item.id, item));
+  const onDelete = (id: string) => run(() => deleteWorkItem(id));
 
   return (
     <div class="space-y-6">
@@ -66,36 +82,92 @@ export const WorkItems: Component = () => {
           id="project"
           value={projectId()}
           onInput={(e) => setProjectId(e.currentTarget.value)}
-          class="px-2 py-1 rounded-md border border-input bg-background text-sm w-40
-                 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          class={`w-40 ${fieldClass}`}
         />
       </div>
 
-      <form onSubmit={add} class="flex flex-wrap items-center gap-2">
-        <input
-          placeholder="New work item title…"
-          value={title()}
-          onInput={(e) => setTitle(e.currentTarget.value)}
-          class="flex-1 min-w-60 px-3 py-2 rounded-md border border-input bg-background
-                 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        />
-        <select
-          value={priority()}
-          onChange={(e) => setPriority(Number(e.currentTarget.value))}
-          class="px-2 py-2 rounded-md border border-input bg-background text-sm"
-        >
-          <For each={PRIORITY_LABELS}>
-            {(label, i) => <option value={i()}>{label}</option>}
-          </For>
-        </select>
-        <button
-          type="submit"
-          disabled={busy() || title().trim() === ''}
-          class="px-4 py-2 rounded-md bg-primary text-primary-foreground font-medium
-                 hover:opacity-90 transition-opacity disabled:opacity-50"
-        >
-          Add
-        </button>
+      <form onSubmit={add} class="space-y-3">
+        <div class="flex flex-wrap items-center gap-2">
+          <input
+            placeholder="New work item title…"
+            value={title()}
+            onInput={(e) => setTitle(e.currentTarget.value)}
+            class={`flex-1 min-w-60 ${fieldClass}`}
+          />
+          <select
+            aria-label="Priority"
+            value={priority()}
+            onChange={(e) => setPriority(Number(e.currentTarget.value))}
+            class={fieldClass}
+          >
+            <For each={PRIORITY_LABELS}>{(label, i) => <option value={i()}>{label}</option>}</For>
+          </select>
+          <button
+            type="button"
+            onClick={() => setShowMore(!showMore())}
+            aria-expanded={showMore()}
+            class="px-3 py-2 rounded-md border border-border text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+          >
+            {showMore() ? 'Fewer' : 'More'}
+          </button>
+          <button
+            type="submit"
+            disabled={busy() || title().trim() === ''}
+            class="px-4 py-2 rounded-md bg-primary text-primary-foreground font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+          >
+            Add
+          </button>
+        </div>
+
+        <Show when={showMore()}>
+          <div class="space-y-3 rounded-lg border border-border bg-muted/40 p-4">
+            <textarea
+              aria-label="Description"
+              placeholder="Description (markdown)"
+              rows={2}
+              value={description()}
+              onInput={(e) => setDescription(e.currentTarget.value)}
+              class={`w-full ${fieldClass}`}
+            />
+            <input
+              aria-label="Labels"
+              placeholder="Labels (comma separated)"
+              value={labelsText()}
+              onInput={(e) => setLabelsText(e.currentTarget.value)}
+              class={`w-full ${fieldClass}`}
+            />
+            <div class="flex flex-wrap items-end gap-3">
+              <label class="flex flex-col gap-1 text-xs text-muted-foreground">
+                Due date
+                <input
+                  type="date"
+                  value={dueDate()}
+                  onInput={(e) => setDueDate(e.currentTarget.value)}
+                  class={fieldClass}
+                />
+              </label>
+              <label class="flex flex-col gap-1 text-xs text-muted-foreground">
+                Story points
+                <input
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  value={storyPoints()}
+                  onInput={(e) => setStoryPoints(e.currentTarget.value)}
+                  class={`w-28 ${fieldClass}`}
+                />
+              </label>
+              <label class="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={milestone()}
+                  onChange={(e) => setMilestone(e.currentTarget.checked)}
+                />
+                Milestone
+              </label>
+            </div>
+          </div>
+        </Show>
       </form>
 
       <Show when={error()}>
@@ -116,30 +188,7 @@ export const WorkItems: Component = () => {
           >
             <ul class="space-y-2">
               <For each={items()}>
-                {(item) => (
-                  <li class="flex items-center gap-3 rounded-lg border border-border bg-card text-card-foreground px-4 py-3">
-                    <input
-                      class="flex-1 bg-transparent focus:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded px-1"
-                      value={item.title}
-                      onChange={(e) => rename(item, e.currentTarget.value)}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => void cyclePriority(item)}
-                      title="Click to change priority"
-                      class="text-xs px-2 py-1 rounded-full border border-border bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
-                    >
-                      {priorityLabel(item.priority)}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void remove(item)}
-                      class="text-xs px-2 py-1 rounded-md text-destructive hover:bg-destructive hover:text-destructive-foreground transition-colors"
-                    >
-                      Delete
-                    </button>
-                  </li>
-                )}
+                {(item) => <WorkItemCard item={item} onUpdate={onUpdate} onDelete={onDelete} />}
               </For>
             </ul>
           </Show>
