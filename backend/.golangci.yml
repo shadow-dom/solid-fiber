@@ -1,0 +1,12 @@
+version: "2"
+
+run:
+  timeout: 5m
+
+linters:
+  # Keep golangci-lint's default set (errcheck, govet, ineffassign,
+  # staticcheck, unused) and add a few low-noise extras.
+  enable:
+    - misspell
+    - bodyclose
+    - errorlint

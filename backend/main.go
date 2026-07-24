@@ -30,7 +30,7 @@ func main() {
 		slog.Error("open database", "error", err)
 		os.Exit(1)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	// Dependency wiring: repository -> service -> handlers.
 	repo, err := work_item.NewSQLiteRepository(db)

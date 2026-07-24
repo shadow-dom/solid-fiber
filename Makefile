@@ -1,4 +1,4 @@
-.PHONY: dev dev-frontend dev-backend build build-frontend build-backend run clean install up down
+.PHONY: dev dev-frontend dev-backend build build-frontend build-backend run clean install up down test lint
 
 FRONTEND_DIR := frontend/app
 BACKEND_DIR  := backend
@@ -28,6 +28,17 @@ build-backend:
 
 run: build
 	./$(BIN)
+
+# Run all tests (Go + frontend).
+test:
+	cd $(BACKEND_DIR) && go test ./...
+	cd $(FRONTEND_DIR) && bun run test
+
+# Lint both stacks. Requires golangci-lint on PATH
+# (go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest).
+lint:
+	cd $(BACKEND_DIR) && golangci-lint run ./...
+	cd $(FRONTEND_DIR) && bun run lint
 
 clean:
 	rm -rf $(BIN) backend/web/dist/*

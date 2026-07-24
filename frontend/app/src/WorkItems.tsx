@@ -37,8 +37,11 @@ export const WorkItems: Component = () => {
     e.preventDefault();
     const t = title().trim();
     if (!t) return;
+    // Capture reactive values in the event handler; the async closure uses them.
+    const project = projectId();
+    const p = priority();
     void run(async () => {
-      await createWorkItem({ title: t, project_id: projectId(), priority: priority() });
+      await createWorkItem({ title: t, project_id: project, priority: p });
       setTitle('');
       setPriority(0);
     });

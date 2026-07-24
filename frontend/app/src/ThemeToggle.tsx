@@ -69,7 +69,7 @@ export const ThemeToggle: Component = () => {
   });
 
   return (
-    <div ref={rootEl} class="relative inline-block">
+    <div ref={(el) => (rootEl = el)} class="relative inline-block">
       <button
         type="button"
         aria-label="Theme settings"
