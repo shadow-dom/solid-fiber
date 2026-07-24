@@ -28,6 +28,21 @@ interface Envelope<T> {
   error: string | null;
 }
 
+/** A page of results plus pagination metadata. */
+export interface Page<T> {
+  items: T[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+interface ListEnvelope {
+  status: boolean;
+  data: WorkItem[];
+  meta?: { total: number; limit: number; offset: number };
+  error: string | null;
+}
+
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
   const res = await fetch(url, options);
   // DELETE returns 204 with no body.
@@ -46,8 +61,27 @@ const json = (method: string, payload: unknown): RequestInit => ({
   body: JSON.stringify(payload),
 });
 
-export const listWorkItems = (projectId: string): Promise<WorkItem[]> =>
-  request<WorkItem[]>(`/api/work-items?project_id=${encodeURIComponent(projectId)}`);
+export const listWorkItems = async (
+  projectId: string,
+  opts: { limit?: number; offset?: number } = {},
+): Promise<Page<WorkItem>> => {
+  const params = new URLSearchParams({ project_id: projectId });
+  if (opts.limit != null) params.set('limit', String(opts.limit));
+  if (opts.offset != null) params.set('offset', String(opts.offset));
+
+  const res = await fetch(`/api/work-items?${params.toString()}`);
+  const body = (await res.json()) as ListEnvelope;
+  if (!res.ok || !body.status) {
+    throw new Error(body?.error || `Request failed (${res.status})`);
+  }
+  const items = body.data ?? [];
+  return {
+    items,
+    total: body.meta?.total ?? items.length,
+    limit: body.meta?.limit ?? opts.limit ?? items.length,
+    offset: body.meta?.offset ?? opts.offset ?? 0,
+  };
+};
 
 export const createWorkItem = (input: NewWorkItem): Promise<WorkItem> =>
   request<WorkItem>('/api/work-items', json('POST', input));

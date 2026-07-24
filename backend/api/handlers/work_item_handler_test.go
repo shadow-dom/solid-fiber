@@ -100,6 +100,43 @@ func TestWorkItem_RoundTrip(t *testing.T) {
 	}
 }
 
+func TestListWorkItems_Paginates(t *testing.T) {
+	app := newTestApp()
+	for _, title := range []string{"a", "b", "c"} {
+		if s, _ := do(t, app, http.MethodPost, "/api/work-items",
+			`{"title":"`+title+`","project_id":"p1"}`); s != http.StatusCreated {
+			t.Fatalf("seed create failed: %d", s)
+		}
+	}
+
+	status, body := do(t, app, http.MethodGet, "/api/work-items?project_id=p1&limit=2&offset=0", "")
+	if status != http.StatusOK {
+		t.Fatalf("expected 200, got %d", status)
+	}
+	data, _ := body["data"].([]any)
+	if len(data) != 2 {
+		t.Fatalf("expected 2 items on the page, got %d", len(data))
+	}
+	meta, ok := body["meta"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected meta in response, got %v", body)
+	}
+	if total, _ := meta["total"].(float64); total != 3 {
+		t.Fatalf("expected meta.total 3, got %v", meta["total"])
+	}
+}
+
+func TestListWorkItems_MissingProjectID_BadRequest(t *testing.T) {
+	app := newTestApp()
+	status, body := do(t, app, http.MethodGet, "/api/work-items", "")
+	if status != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", status)
+	}
+	if body["status"] != false {
+		t.Fatalf("expected error envelope, got %v", body)
+	}
+}
+
 func TestUnknownAPIRoute_Returns404(t *testing.T) {
 	app := newTestApp()
 	// Register the same catch-all main.go uses.

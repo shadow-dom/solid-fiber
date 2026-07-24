@@ -99,10 +99,16 @@ func (r *sqliteRepository) Delete(id string) error {
 	return nil
 }
 
-func (r *sqliteRepository) ListByProjectID(projectID string) ([]*WorkItem, error) {
+func (r *sqliteRepository) ListByProjectID(projectID string, limit, offset int) ([]*WorkItem, error) {
+	if limit <= 0 {
+		limit = -1 // SQLite: no limit
+	}
+	if offset < 0 {
+		offset = 0
+	}
 	rows, err := r.db.Query(
-		`SELECT `+workItemColumns+` FROM work_items WHERE project_id = ? ORDER BY id`,
-		projectID)
+		`SELECT `+workItemColumns+` FROM work_items WHERE project_id = ? ORDER BY id LIMIT ? OFFSET ?`,
+		projectID, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("list work items: %w", err)
 	}
@@ -120,6 +126,16 @@ func (r *sqliteRepository) ListByProjectID(projectID string) ([]*WorkItem, error
 		return nil, fmt.Errorf("iterate work items: %w", err)
 	}
 	return items, nil
+}
+
+func (r *sqliteRepository) CountByProjectID(projectID string) (int, error) {
+	var n int
+	if err := r.db.QueryRow(
+		`SELECT COUNT(*) FROM work_items WHERE project_id = ?`, projectID,
+	).Scan(&n); err != nil {
+		return 0, fmt.Errorf("count work items: %w", err)
+	}
+	return n, nil
 }
 
 // scanner is satisfied by both *sql.Row and *sql.Rows.

@@ -2,6 +2,7 @@ package work_item
 
 import (
 	"errors"
+	"sort"
 	"sync"
 )
 
@@ -14,7 +15,11 @@ type Repository interface {
 	GetByID(id string) (*WorkItem, error)
 	Update(item *WorkItem) (*WorkItem, error)
 	Delete(id string) error
-	ListByProjectID(projectID string) ([]*WorkItem, error)
+	// ListByProjectID returns items for a project ordered by id, sliced by
+	// offset and limit. A limit <= 0 means no limit.
+	ListByProjectID(projectID string, limit, offset int) ([]*WorkItem, error)
+	// CountByProjectID returns the total number of items for a project.
+	CountByProjectID(projectID string) (int, error)
 }
 
 // inMemoryRepository is a goroutine-safe, in-memory Repository implementation.
@@ -69,15 +74,39 @@ func (r *inMemoryRepository) Delete(id string) error {
 	return nil
 }
 
-func (r *inMemoryRepository) ListByProjectID(projectID string) ([]*WorkItem, error) {
+func (r *inMemoryRepository) ListByProjectID(projectID string, limit, offset int) ([]*WorkItem, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	items := make([]*WorkItem, 0)
+	matched := make([]*WorkItem, 0)
 	for _, item := range r.items {
 		if item.ProjectID == projectID {
 			clone := *item
-			items = append(items, &clone)
+			matched = append(matched, &clone)
 		}
 	}
-	return items, nil
+	sort.Slice(matched, func(i, j int) bool { return matched[i].ID < matched[j].ID })
+
+	if offset < 0 {
+		offset = 0
+	}
+	if offset >= len(matched) {
+		return []*WorkItem{}, nil
+	}
+	end := len(matched)
+	if limit > 0 && offset+limit < end {
+		end = offset + limit
+	}
+	return matched[offset:end], nil
+}
+
+func (r *inMemoryRepository) CountByProjectID(projectID string) (int, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	n := 0
+	for _, item := range r.items {
+		if item.ProjectID == projectID {
+			n++
+		}
+	}
+	return n, nil
 }

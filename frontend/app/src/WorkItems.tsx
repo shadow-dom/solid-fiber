@@ -1,4 +1,13 @@
-import { For, Show, Switch, Match, createResource, createSignal, type Component } from 'solid-js';
+import {
+  For,
+  Show,
+  Switch,
+  Match,
+  createEffect,
+  createResource,
+  createSignal,
+  type Component,
+} from 'solid-js';
 import {
   listWorkItems,
   createWorkItem,
@@ -13,9 +22,29 @@ const fieldClass =
   'px-3 py-2 rounded-md border border-input bg-background text-sm ' +
   'focus:outline-none focus-visible:ring-2 focus-visible:ring-ring';
 
+const PAGE_SIZE = 20;
+
 export const WorkItems: Component = () => {
   const [projectId, setProjectId] = createSignal('demo');
-  const [items, { refetch }] = createResource(projectId, listWorkItems);
+  const [offset, setOffset] = createSignal(0);
+
+  const [page, { refetch }] = createResource(
+    () => ({ projectId: projectId(), offset: offset() }),
+    (src) => listWorkItems(src.projectId, { limit: PAGE_SIZE, offset: src.offset }),
+  );
+
+  const items = () => page()?.items ?? [];
+  const total = () => page()?.total ?? 0;
+
+  // If the current offset falls past the end (e.g. after deleting the last item
+  // on the last page), step back to the last page that has content.
+  createEffect(() => {
+    if (page.error) return; // reading page() while errored would re-throw
+    const p = page();
+    if (p && p.total > 0 && p.offset > 0 && p.offset >= p.total) {
+      setOffset(Math.floor((p.total - 1) / PAGE_SIZE) * PAGE_SIZE);
+    }
+  });
 
   const [title, setTitle] = createSignal('');
   const [priority, setPriority] = createSignal(0);
@@ -68,6 +97,7 @@ export const WorkItems: Component = () => {
       setStoryPoints('');
       setMilestone(false);
       setShowMore(false);
+      setOffset(0); // show the first page after adding
     });
   };
 
@@ -81,7 +111,10 @@ export const WorkItems: Component = () => {
         <input
           id="project"
           value={projectId()}
-          onInput={(e) => setProjectId(e.currentTarget.value)}
+          onInput={(e) => {
+            setProjectId(e.currentTarget.value);
+            setOffset(0);
+          }}
           class={`w-40 ${fieldClass}`}
         />
       </div>
@@ -175,15 +208,15 @@ export const WorkItems: Component = () => {
       </Show>
 
       <Switch>
-        <Match when={items.loading}>
+        <Match when={page.loading}>
           <p class="text-sm text-muted-foreground">Loading…</p>
         </Match>
-        <Match when={items.error}>
-          <p class="text-sm text-destructive">Failed to load: {String(items.error)}</p>
+        <Match when={page.error}>
+          <p class="text-sm text-destructive">Failed to load: {String(page.error)}</p>
         </Match>
-        <Match when={items()}>
+        <Match when={page()}>
           <Show
-            when={(items() ?? []).length > 0}
+            when={items().length > 0}
             fallback={<p class="text-sm text-muted-foreground">No work items yet. Add one above.</p>}
           >
             <ul class="space-y-2">
@@ -191,6 +224,32 @@ export const WorkItems: Component = () => {
                 {(item) => <WorkItemCard item={item} onUpdate={onUpdate} onDelete={onDelete} />}
               </For>
             </ul>
+
+            <Show when={total() > PAGE_SIZE}>
+              <div class="flex items-center justify-between pt-2 text-sm">
+                <span class="text-muted-foreground">
+                  {offset() + 1}–{Math.min(offset() + PAGE_SIZE, total())} of {total()}
+                </span>
+                <div class="flex items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={offset() === 0}
+                    onClick={() => setOffset(Math.max(0, offset() - PAGE_SIZE))}
+                    class="px-3 py-1.5 rounded-md border border-border hover:bg-accent hover:text-accent-foreground transition-colors disabled:opacity-50"
+                  >
+                    Previous
+                  </button>
+                  <button
+                    type="button"
+                    disabled={offset() + PAGE_SIZE >= total()}
+                    onClick={() => setOffset(offset() + PAGE_SIZE)}
+                    class="px-3 py-1.5 rounded-md border border-border hover:bg-accent hover:text-accent-foreground transition-colors disabled:opacity-50"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            </Show>
           </Show>
         </Match>
       </Switch>

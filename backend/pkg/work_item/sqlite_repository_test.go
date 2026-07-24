@@ -77,23 +77,43 @@ func TestSQLiteRepository_NotFound(t *testing.T) {
 	}
 }
 
-func TestSQLiteRepository_ListByProjectID(t *testing.T) {
+func TestSQLiteRepository_ListByProjectIDAndCount(t *testing.T) {
 	repo := newSQLiteRepo(t, filepath.Join(t.TempDir(), "test.db"))
 	for _, wi := range []*work_item.WorkItem{
 		{ID: "a", Title: "a", ProjectID: "p1"},
 		{ID: "b", Title: "b", ProjectID: "p1"},
-		{ID: "c", Title: "c", ProjectID: "p2"},
+		{ID: "c", Title: "c", ProjectID: "p1"},
+		{ID: "z", Title: "z", ProjectID: "p2"},
 	} {
 		if _, err := repo.Create(wi); err != nil {
 			t.Fatal(err)
 		}
 	}
-	items, err := repo.ListByProjectID("p1")
+
+	count, err := repo.CountByProjectID("p1")
+	if err != nil {
+		t.Fatalf("count: %v", err)
+	}
+	if count != 3 {
+		t.Fatalf("expected count 3 for p1, got %d", count)
+	}
+
+	// First page of 2, ordered by id -> a, b.
+	page1, err := repo.ListByProjectID("p1", 2, 0)
 	if err != nil {
 		t.Fatalf("list: %v", err)
 	}
-	if len(items) != 2 {
-		t.Fatalf("expected 2 items for p1, got %d", len(items))
+	if len(page1) != 2 || page1[0].ID != "a" || page1[1].ID != "b" {
+		t.Fatalf("unexpected page 1: %+v", page1)
+	}
+
+	// Second page -> c.
+	page2, err := repo.ListByProjectID("p1", 2, 2)
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if len(page2) != 1 || page2[0].ID != "c" {
+		t.Fatalf("unexpected page 2: %+v", page2)
 	}
 }
 
