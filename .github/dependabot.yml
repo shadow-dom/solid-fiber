@@ -23,6 +23,12 @@ updates:
     versioning-strategy: increase
     commit-message:
       prefix: "npm"
+    ignore:
+      # typescript-eslint does not support TypeScript >= 7 yet
+      # (https://github.com/typescript-eslint/typescript-eslint/issues/10940).
+      # Stay on the 5.x line until the lint toolchain supports the new compiler.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
     groups:
       js-dependencies:
         patterns: ["*"]
