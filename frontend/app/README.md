@@ -26,6 +26,7 @@ so run the backend alongside the dev server.
 - `bun run dev` — start the Vite dev server on :5173 (proxies `/api` to the backend on :3000).
 - `bun run build` — type-check (`tsc --noEmit`) then build for production.
 - `bun run typecheck` — run `tsc --noEmit` with no emit, failing on type errors.
+- `bun run test` — run the [Vitest](https://vitest.dev) suite once (`test:watch` for watch mode).
 - `bun run serve` — preview the production build locally.
 
 ## Build output
