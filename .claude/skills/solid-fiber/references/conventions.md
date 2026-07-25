@@ -61,9 +61,12 @@ follow-up.)
   static and runs on distroless). Opened via `storage.OpenSQLite(path)` with WAL
   + busy-timeout + foreign-keys.
 - Schema changes are **append-only** `storage.Migration` entries run by
-  `storage.Migrate` (tracked in a `schema_migrations` table, each in its own
-  transaction). Add a new version; never mutate an applied one. **Why:** every
-  environment converges to the same schema deterministically on startup.
+  `storage.Migrate(db, namespace, migrations)`. Versions are **scoped per
+  namespace** (pass the resource's table name), so each resource numbers its
+  migrations from 1 with no cross-resource collision, tracked in a shared
+  `schema_migrations` table keyed by `(namespace, version)`. Add a new version;
+  never mutate an applied one. **Why:** every environment converges to the same
+  schema deterministically, and resources stay independent.
 - The `Repository` is an **interface** with an in-memory impl (tests/dev) and a
   SQLite impl. **Why:** fast, dependency-free unit tests, and the store is
   swappable (a Postgres impl would just be a third implementation).

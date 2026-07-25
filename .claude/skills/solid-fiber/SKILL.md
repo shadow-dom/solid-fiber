@@ -88,7 +88,7 @@ Load-bearing; details and rationale in `references/conventions.md`.
 - **IDs are server-assigned UUID strings.** The service sets `ID = uuid.NewString()` on create and ignores any client id.
 - **Errors flow up as sentinel errors**; `handlers.statusForError` maps them (validation → 400, not-found → 404, else 500). Add new validation sentinels there.
 - **The Repository is an interface with two implementations** (in-memory for tests/dev, SQLite for real). Keep them in lockstep.
-- **Migrations are append-only.** Add a new `storage.Migration` with the next version; never edit an applied one.
+- **Migrations are append-only and namespaced per resource.** `storage.Migrate(db, "<table>", Migrations)` scopes versions by namespace, so each resource numbers its migrations from `1` with no collision. Never edit an applied one.
 - **Fiber v3, not v2**: body parsing is `c.Bind().Body(&x)` (no `c.BodyParser`); listen is `app.Listen(addr, fiber.ListenConfig{GracefulContext: ctx})`.
 
 ## UI: shadcn/ui design language

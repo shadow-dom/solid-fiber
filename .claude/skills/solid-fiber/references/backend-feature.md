@@ -6,8 +6,10 @@ name (e.g. `tag`), `<Resource>` the exported type (e.g. `Tag`). Read the real
 `work_item` files alongside these templates — they are the source of truth.
 
 The `//` notes in the templates below are guidance to *you*, not comments to ship.
-The code you write should follow the project standard: self-documenting, with
-comments only for non-obvious *why* (see SKILL.md → Core principles).
+Match the comment level of the `work_item` files you copy: a crisp doc sentence on
+each exported identifier (Go wants those) and the occasional *why* note — nothing
+more. Do **not** add comments that narrate logic; if you feel one is needed,
+rename or extract instead (see SKILL.md → Core principles).
 
 ## Order of work — test-first
 
@@ -77,16 +79,18 @@ Uses only `database/sql` (the driver import lives in `pkg/storage`). Store slice
 
 ```go
 func NewSQLiteRepository(db *sql.DB) (Repository, error) {
-	if err := storage.Migrate(db, Migrations); err != nil {
+	if err := storage.Migrate(db, "<resource>s", Migrations); err != nil {
 		return nil, fmt.Errorf("migrate <resource> schema: %w", err)
 	}
 	return &sqliteRepository{db: db}, nil
 }
 ```
 
+The first argument is the migration **namespace** — pass the table name (e.g. `"tags"`). Versions are scoped to it, so this resource numbers its migrations from 1 independently of every other resource.
+
 ## 4. Migration — `pkg/<resource>/migrations.go`
 
-Append-only. Version numbers are per-resource (they live in their own `schema_migrations` table row set only if you share a DB — in this repo each resource owns its tables; keep versions monotonic within the slice).
+Append-only, and **numbered from 1 per resource**: `storage.Migrate` scopes versions by the namespace you pass in step 3, so every resource's first migration is `Version: 1` and there is no cross-resource collision. Never edit an applied migration; add a `{Version: 2, ...}` with `ALTER TABLE ...` to evolve.
 
 ```go
 package <resource>
@@ -109,8 +113,6 @@ CREATE INDEX IF NOT EXISTS idx_<resource>s_project_id ON <resource>s(project_id)
 	},
 }
 ```
-
-To evolve an existing resource, **add** a `{Version: 2, ...}` entry with `ALTER TABLE ...`; never edit version 1.
 
 ## 5. Service — `pkg/<resource>/service.go`
 
