@@ -23,7 +23,7 @@ type sqliteRepository struct {
 // schema migrations first. Migration is idempotent, so this is safe to call on
 // an already-migrated database.
 func NewSQLiteRepository(db *sql.DB) (Repository, error) {
-	if err := storage.Migrate(db, Migrations); err != nil {
+	if err := storage.Migrate(db, "work_items", Migrations); err != nil {
 		return nil, fmt.Errorf("migrate work_items schema: %w", err)
 	}
 	return &sqliteRepository{db: db}, nil
