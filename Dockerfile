@@ -2,7 +2,7 @@
 
 # ---------- Stage 1: build SPA ----------
 # Mirror the repo layout so Vite's outDir (../../backend/web/dist) resolves correctly.
-FROM oven/bun:1.3-alpine AS frontend
+FROM oven/bun:1.4-alpine AS frontend
 WORKDIR /repo/frontend/app
 
 COPY frontend/app/package.json frontend/app/bun.lock* ./
