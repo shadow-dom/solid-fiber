@@ -2,7 +2,7 @@
 
 # ---------- Stage 1: build SPA ----------
 # Mirror the repo layout so Vite's outDir (../../backend/web/dist) resolves correctly.
-FROM oven/bun:1.3-alpine AS frontend
+FROM oven/bun:1.4-alpine AS frontend
 WORKDIR /repo/frontend/app
 
 COPY frontend/app/package.json frontend/app/bun.lock* ./
@@ -14,7 +14,7 @@ RUN mkdir -p /repo/backend/web/dist && bun run build
 
 
 # ---------- Stage 2: build static Go binary ----------
-FROM golang:1.26-alpine AS backend
+FROM golang:1.27-alpine AS backend
 WORKDIR /src
 
 COPY backend/go.mod backend/go.sum ./
